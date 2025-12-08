@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "Server.ts"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts", "node_modules"],
+  "exec": "ts-node-dev --transpile-only --require ./register-paths.js Server.ts"
+}
