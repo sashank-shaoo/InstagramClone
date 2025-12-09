@@ -53,12 +53,11 @@ export default function LoginPage() {
           axiosError.response?.data?.message ||
             "Email not verified. Check your email for verification code."
         );
-        // Store email for verification page
+        // Store email and redirect to verify page with email in URL
         if (email) {
           sessionStorage.setItem("verifyEmail", email);
-          // Redirect to verify page after a short delay
           setTimeout(() => {
-            router.push("/verify-email");
+            router.push(`/verify-email?email=${encodeURIComponent(email)}`);
           }, 2000);
         }
       } else {
