@@ -15,6 +15,9 @@ import messageRoutes from "@routes/message.routes";
 
 const app = express();
 
+// Trust proxy for Railway/Vercel
+app.set("trust proxy", 1);
+
 // CORS configuration - MUST be before helmet
 const corsOptions = {
   origin: process.env.CORS_ORIGIN?.split(",").map((o) => o.trim()) || [
