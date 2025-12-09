@@ -1,4 +1,3 @@
-import nodemailer, { Transporter } from "nodemailer";
 import logger from "@utils/logger";
 
 interface EmailOptions {
@@ -8,89 +7,71 @@ interface EmailOptions {
   text?: string;
 }
 
-class NodemailerService {
-  private transporter: Transporter;
-  private retryAttempts = 3;
-  private retryDelay = 1000; // 1 second
+/**
+ * Brevo Email Service using HTTP API
+ * Uses HTTPS (port 443) instead of SMTP (port 587) which is blocked on Railway
+ */
+class BrevoEmailService {
+  private apiKey: string;
+  private apiUrl = "https://api.brevo.com/v3/smtp/email";
+  private fromEmail: string;
+  private fromName: string;
+  private useSmtpFallback: boolean;
 
   constructor() {
-    const port = parseInt(process.env.SMTP_PORT || "587");
-    // Port 465 uses SSL (secure: true), Port 587 uses STARTTLS (secure: false)
-    const isSecure = port === 465;
+    this.apiKey = process.env.BREVO_API_KEY || process.env.SMTP_PASSWORD || "";
+    this.fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
+    this.fromName = process.env.EMAIL_FROM_NAME || "Instagram Clone";
+    this.useSmtpFallback = false;
 
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: port,
-      secure: isSecure, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-      // Connection settings for cloud environments
-      connectionTimeout: 30000, // 30 seconds
-      greetingTimeout: 15000,
-      socketTimeout: 30000,
-      // TLS options for compatibility
-      tls: {
-        rejectUnauthorized: false,
-        minVersion: "TLSv1.2" as const,
-      },
-    });
-
-    // Verify connection
-    this.verifyConnection();
-  }
-
-  /**
-   * Verify SMTP connection
-   */
-  private async verifyConnection(): Promise<void> {
-    try {
-      await this.transporter.verify();
-      logger.info("SMTP connection verified successfully");
-    } catch (error: any) {
-      logger.error(`SMTP connection error: ${error.message}`);
+    if (!this.apiKey) {
+      logger.warn("BREVO_API_KEY not set, email service will not work");
+    } else {
+      logger.info("Brevo HTTP API email service initialized");
     }
   }
 
   /**
-   * Send email with retry logic
+   * Send email using Brevo HTTP API
    */
-  async sendEmail(options: EmailOptions, attempt: number = 1): Promise<void> {
+  async sendEmail(options: EmailOptions): Promise<void> {
+    if (!this.apiKey) {
+      logger.error("Cannot send email: BREVO_API_KEY not configured");
+      throw new Error("Email service not configured");
+    }
+
+    const payload = {
+      sender: {
+        name: this.fromName,
+        email: this.fromEmail,
+      },
+      to: [{ email: options.to }],
+      subject: options.subject,
+      htmlContent: options.html,
+      textContent: options.text || "",
+    };
+
     try {
-      const mailOptions = {
-        from: `${process.env.EMAIL_FROM_NAME || "Instagram Clone"} <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text || "",
-      };
+      const response = await fetch(this.apiUrl, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "api-key": this.apiKey,
+        },
+        body: JSON.stringify(payload),
+      });
 
-      await this.transporter.sendMail(mailOptions);
-      logger.info(`Email sent successfully to ${options.to}`);
-    } catch (error: any) {
-      logger.error(`Email send error (attempt ${attempt}): ${error.message}`);
-
-      // Retry logic
-      if (attempt < this.retryAttempts) {
-        logger.info(
-          `Retrying email send (attempt ${attempt + 1}/${this.retryAttempts})...`
-        );
-        await this.delay(this.retryDelay * attempt); // Exponential backoff
-        return this.sendEmail(options, attempt + 1);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
 
-      throw new Error(
-        `Failed to send email after ${this.retryAttempts} attempts`
-      );
+      logger.info(`Email sent successfully to ${options.to} via Brevo API`);
+    } catch (error: any) {
+      logger.error(`Brevo API email error: ${error.message}`);
+      throw error;
     }
-  }
-
-  /**
-   * Delay helper for retry logic
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -113,7 +94,6 @@ class NodemailerService {
           .otp-box { background: white; border: 2px dashed #667eea; padding: 20px; margin: 20px 0; text-align: center; border-radius: 10px; }
           .otp { font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px; }
           .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
         </style>
       </head>
       <body>
@@ -297,7 +277,7 @@ class NodemailerService {
             </ul>
             <p>Get started by completing your profile and posting your first photo!</p>
             <center>
-              <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}" class="button">Go to App</a>
+              <a href="${process.env.CLIENT_URL || "http://localhost:3000"}" class="button">Go to App</a>
             </center>
           </div>
           <div class="footer">
@@ -308,7 +288,7 @@ class NodemailerService {
       </html>
     `;
 
-    const text = `Hi ${name},\n\nWelcome to Instagram Clone! Your account @${username} has been successfully created.\n\nVisit ${process.env.FRONTEND_URL || "http://localhost:3000"} to get started!`;
+    const text = `Hi ${name},\n\nWelcome to Instagram Clone! Your account @${username} has been successfully created.\n\nVisit ${process.env.CLIENT_URL || "http://localhost:3000"} to get started!`;
 
     await this.sendEmail({
       to: email,
@@ -319,4 +299,4 @@ class NodemailerService {
   }
 }
 
-export default new NodemailerService();
+export default new BrevoEmailService();

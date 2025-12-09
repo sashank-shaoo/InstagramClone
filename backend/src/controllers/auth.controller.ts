@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import User from "@models/User.model";
 import jwtService, { TokenPayload } from "@services/auth/jwt.service";
 import otpService from "@services/auth/otp.service";
-import emailService from "@services/email/nodemailer.service";
+import emailService from "@services/email/brevo.service";
 import {
   asyncHandler,
   AuthError,

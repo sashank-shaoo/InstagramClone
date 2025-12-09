@@ -15,7 +15,7 @@ import {
   emailLimiter,
   passwordResetLimiter,
 } from "@middleware/rate-limiter";
-import nodemailerService from "@services/email/nodemailer.service";
+import brevoService from "@services/email/brevo.service";
 import logger from "@utils/logger";
 
 const router = Router();
@@ -68,10 +68,10 @@ router.post(
 
       logger.info(`Testing email to: ${email}`);
       logger.info(
-        `SMTP Config: host=${process.env.SMTP_HOST}, port=${process.env.SMTP_PORT}, user=${process.env.SMTP_USER}, from=${process.env.EMAIL_FROM}`
+        `Brevo API Config: from=${process.env.EMAIL_FROM}, apiKey=${process.env.BREVO_API_KEY ? "SET" : "NOT SET"}`
       );
 
-      await nodemailerService.sendVerificationEmail(
+      await brevoService.sendVerificationEmail(
         email,
         "123456",
         "Test User"
@@ -81,10 +81,8 @@ router.post(
         success: true,
         message: `Test email sent to ${email}. Check your inbox and spam folder.`,
         config: {
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          user: process.env.SMTP_USER,
           from: process.env.EMAIL_FROM,
+          apiKeySet: !!process.env.BREVO_API_KEY,
         },
       });
     } catch (error: any) {
