@@ -65,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
           }
         }
 
+        // Clear state
         set({
           user: null,
           accessToken: null,
@@ -72,6 +73,13 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           error: null,
         });
+
+        // Explicitly clear localStorage to prevent auto-login
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("auth-storage");
+          // Force redirect to login page
+          window.location.href = "/login";
+        }
       },
 
       updateUser: (updates) => {

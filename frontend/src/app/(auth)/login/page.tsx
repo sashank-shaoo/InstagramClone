@@ -18,17 +18,20 @@ export default function LoginPage() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
+    setInfo("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setInfo("");
 
     try {
       const response = await authApi.login(formData);
@@ -36,8 +39,31 @@ export default function LoginPage() {
       login(accessToken, refreshToken, user);
       socketClient.connect();
       router.push("/explore");
-    } catch (err) {
-      setError(getErrorMessage(err));
+    } catch (err: unknown) {
+      // Check if it's an axios error with 403 status (unverified email)
+      const axiosError = err as {
+        response?: {
+          status?: number;
+          data?: { message?: string; data?: { email?: string } };
+        };
+      };
+      if (axiosError?.response?.status === 403) {
+        const email = axiosError.response?.data?.data?.email;
+        setInfo(
+          axiosError.response?.data?.message ||
+            "Email not verified. Check your email for verification code."
+        );
+        // Store email for verification page
+        if (email) {
+          sessionStorage.setItem("verifyEmail", email);
+          // Redirect to verify page after a short delay
+          setTimeout(() => {
+            router.push("/verify-email");
+          }, 2000);
+        }
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -95,6 +121,30 @@ export default function LoginPage() {
               textAlign: "center",
             }}>
             {error}
+          </div>
+        )}
+
+        {/* Info Message (for email verification) */}
+        {info && (
+          <div
+            style={{
+              padding: "var(--space-3)",
+              marginBottom: "var(--space-4)",
+              background: "rgba(0, 149, 246, 0.1)",
+              border: "1px solid var(--accent-blue)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--accent-blue)",
+              fontSize: "var(--text-sm)",
+              textAlign: "center",
+            }}>
+            {info}
+            <p
+              style={{
+                marginTop: "var(--space-2)",
+                fontSize: "var(--text-xs)",
+              }}>
+              Redirecting to verification page...
+            </p>
           </div>
         )}
 
