@@ -204,8 +204,11 @@ export function MobileNav() {
             alignItems: "center",
             justifyContent: "center",
             padding: "var(--space-2)",
+            minWidth: "44px",
+            minHeight: "44px",
             position: "relative",
             WebkitTapHighlightColor: "transparent",
+            zIndex: 10,
           }}>
           {user?.profilePhoto ? (
             <img

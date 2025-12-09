@@ -17,9 +17,66 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatCount, formatRelativeTime } from "@/lib/utils";
-import { postApi, savedApi, commentApi, getErrorMessage } from "@/lib/api";
+import {
+  postApi,
+  savedApi,
+  commentApi,
+  userApi,
+  getErrorMessage,
+} from "@/lib/api";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Post, Comment } from "@/lib/types";
+
+// FollowButton component for Reels
+function FollowButton({
+  userId,
+  initialIsFollowing,
+}: {
+  userId: string;
+  initialIsFollowing: boolean;
+}) {
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleClick = async () => {
+    setIsLoading(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+
+    try {
+      if (wasFollowing) {
+        await userApi.unfollowUser(userId);
+      } else {
+        await userApi.followUser(userId);
+      }
+    } catch {
+      setIsFollowing(wasFollowing);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      style={{
+        padding: "4px 12px",
+        border: isFollowing
+          ? "1px solid rgba(255,255,255,0.5)"
+          : "1px solid white",
+        borderRadius: "8px",
+        background: isFollowing ? "transparent" : "white",
+        color: isFollowing ? "rgba(255,255,255,0.8)" : "black",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: isLoading ? "wait" : "pointer",
+        opacity: isLoading ? 0.7 : 1,
+      }}>
+      {isFollowing ? "Following" : "Follow"}
+    </button>
+  );
+}
 
 interface ReelCardProps {
   reel: Post;
@@ -273,19 +330,13 @@ function ReelCard({
                 }}>
                 {reel.user.username}
               </Link>
-              <button
-                style={{
-                  padding: "4px 12px",
-                  border: "1px solid white",
-                  borderRadius: "8px",
-                  background: "transparent",
-                  color: "white",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}>
-                Follow
-              </button>
+              {/* Only show Follow button if NOT own reel */}
+              {user?.id !== (reel.user.id || (reel.user as any)._id) && (
+                <FollowButton
+                  userId={reel.user.id || (reel.user as any)._id}
+                  initialIsFollowing={reel.user.isFollowing || false}
+                />
+              )}
             </div>
           )}
 
