@@ -5,8 +5,15 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useNotificationStore } from "@/lib/store/notification-store";
 import type { SocketNotification, UserStatus } from "@/lib/types";
 
-const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = (() => {
+  // Use explicit socket URL if set
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+    return process.env.NEXT_PUBLIC_SOCKET_URL;
+  }
+  // Derive from API URL (remove /api suffix if present)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  return apiUrl.replace(/\/api\/?$/, "");
+})();
 
 class SocketClient {
   private socket: Socket | null = null;
