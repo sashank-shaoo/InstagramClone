@@ -1,5 +1,5 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import logger from '@utils/logger';
+import nodemailer, { Transporter } from "nodemailer";
+import logger from "@utils/logger";
 
 interface EmailOptions {
   to: string;
@@ -14,10 +14,14 @@ class NodemailerService {
   private retryDelay = 1000; // 1 second
 
   constructor() {
+    const port = parseInt(process.env.SMTP_PORT || "587");
+    // Port 465 uses SSL (secure: true), Port 587 uses STARTTLS (secure: false)
+    const isSecure = port === 465;
+
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: port,
+      secure: isSecure, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
@@ -34,7 +38,7 @@ class NodemailerService {
   private async verifyConnection(): Promise<void> {
     try {
       await this.transporter.verify();
-      logger.info('SMTP connection verified successfully');
+      logger.info("SMTP connection verified successfully");
     } catch (error: any) {
       logger.error(`SMTP connection error: ${error.message}`);
     }
@@ -46,11 +50,11 @@ class NodemailerService {
   async sendEmail(options: EmailOptions, attempt: number = 1): Promise<void> {
     try {
       const mailOptions = {
-        from: `${process.env.EMAIL_FROM_NAME || 'Instagram Clone'} <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+        from: `${process.env.EMAIL_FROM_NAME || "Instagram Clone"} <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
-        text: options.text || '',
+        text: options.text || "",
       };
 
       await this.transporter.sendMail(mailOptions);
@@ -60,12 +64,16 @@ class NodemailerService {
 
       // Retry logic
       if (attempt < this.retryAttempts) {
-        logger.info(`Retrying email send (attempt ${attempt + 1}/${this.retryAttempts})...`);
+        logger.info(
+          `Retrying email send (attempt ${attempt + 1}/${this.retryAttempts})...`
+        );
         await this.delay(this.retryDelay * attempt); // Exponential backoff
         return this.sendEmail(options, attempt + 1);
       }
 
-      throw new Error(`Failed to send email after ${this.retryAttempts} attempts`);
+      throw new Error(
+        `Failed to send email after ${this.retryAttempts} attempts`
+      );
     }
   }
 
@@ -73,13 +81,17 @@ class NodemailerService {
    * Delay helper for retry logic
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Send verification email
    */
-  async sendVerificationEmail(email: string, otp: string, name: string): Promise<void> {
+  async sendVerificationEmail(
+    email: string,
+    otp: string,
+    name: string
+  ): Promise<void> {
     const html = `
       <!DOCTYPE html>
       <html>
@@ -122,7 +134,7 @@ class NodemailerService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Verify Your Email Address',
+      subject: "Verify Your Email Address",
       html,
       text,
     });
@@ -131,7 +143,11 @@ class NodemailerService {
   /**
    * Send password reset email
    */
-  async sendPasswordResetEmail(email: string, otp: string, name: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    otp: string,
+    name: string
+  ): Promise<void> {
     const html = `
       <!DOCTYPE html>
       <html>
@@ -173,7 +189,7 @@ class NodemailerService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Reset Your Password',
+      subject: "Reset Your Password",
       html,
       text,
     });
@@ -182,7 +198,11 @@ class NodemailerService {
   /**
    * Send email change verification
    */
-  async sendEmailChangeVerification(newEmail: string, otp: string, name: string): Promise<void> {
+  async sendEmailChangeVerification(
+    newEmail: string,
+    otp: string,
+    name: string
+  ): Promise<void> {
     const html = `
       <!DOCTYPE html>
       <html>
@@ -224,7 +244,7 @@ class NodemailerService {
 
     await this.sendEmail({
       to: newEmail,
-      subject: 'Verify Your New Email Address',
+      subject: "Verify Your New Email Address",
       html,
       text,
     });
@@ -233,7 +253,11 @@ class NodemailerService {
   /**
    * Send welcome email
    */
-  async sendWelcomeEmail(email: string, name: string, username: string): Promise<void> {
+  async sendWelcomeEmail(
+    email: string,
+    name: string,
+    username: string
+  ): Promise<void> {
     const html = `
       <!DOCTYPE html>
       <html>
@@ -264,7 +288,7 @@ class NodemailerService {
             </ul>
             <p>Get started by completing your profile and posting your first photo!</p>
             <center>
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" class="button">Go to App</a>
+              <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}" class="button">Go to App</a>
             </center>
           </div>
           <div class="footer">
@@ -275,11 +299,11 @@ class NodemailerService {
       </html>
     `;
 
-    const text = `Hi ${name},\n\nWelcome to Instagram Clone! Your account @${username} has been successfully created.\n\nVisit ${process.env.FRONTEND_URL || 'http://localhost:3000'} to get started!`;
+    const text = `Hi ${name},\n\nWelcome to Instagram Clone! Your account @${username} has been successfully created.\n\nVisit ${process.env.FRONTEND_URL || "http://localhost:3000"} to get started!`;
 
     await this.sendEmail({
       to: email,
-      subject: 'Welcome to Instagram Clone!',
+      subject: "Welcome to Instagram Clone!",
       html,
       text,
     });
