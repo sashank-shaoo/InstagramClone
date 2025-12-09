@@ -15,33 +15,25 @@ import messageRoutes from "@routes/message.routes";
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
-const allowedOrigins = process.env.CORS_ORIGIN?.split(",").map((o) =>
-  o.trim()
-) || ["http://localhost:3000"];
+// CORS configuration - MUST be before helmet
 const corsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log(`CORS blocked origin: ${origin}`);
-      callback(null, false);
-    }
-  },
+  origin: process.env.CORS_ORIGIN?.split(",").map((o) => o.trim()) || [
+    "http://localhost:3000",
+  ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  optionsSuccessStatus: 200,
+  optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
+
+// Security middleware - configured to not interfere with CORS
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  })
+);
 
 // Body parsing middleware - increased limits for video uploads
 app.use(express.json({ limit: "150mb" }));
