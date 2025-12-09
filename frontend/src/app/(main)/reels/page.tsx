@@ -13,6 +13,7 @@ import {
   Play,
   X,
   Send,
+  Shuffle,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatCount, formatRelativeTime } from "@/lib/utils";
@@ -734,6 +735,26 @@ export default function ReelsPage() {
   const [showComments, setShowComments] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Shuffle array function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Shuffle reels
+  const handleShuffle = () => {
+    setReels((prev) => shuffleArray(prev));
+    setActiveIndex(0);
+    // Scroll to top
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   // Fetch reels (video posts)
   useEffect(() => {
     const fetchReels = async () => {
@@ -743,7 +764,8 @@ export default function ReelsPage() {
         const videoPosts = (response.data?.posts || []).filter(
           (post) => post.mediaType === "video"
         );
-        setReels(videoPosts);
+        // Shuffle on initial load
+        setReels(shuffleArray(videoPosts));
       } catch (err) {
         setError(getErrorMessage(err));
       } finally {
@@ -883,6 +905,31 @@ export default function ReelsPage() {
           </div>
         ))}
       </div>
+
+      {/* Shuffle Button */}
+      <button
+        onClick={handleShuffle}
+        style={{
+          position: "fixed",
+          top: "20px",
+          left: "20px",
+          width: "44px",
+          height: "44px",
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.15)",
+          backdropFilter: "blur(10px)",
+          border: "none",
+          color: "white",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 100,
+          transition: "all 0.2s ease",
+        }}
+        title="Shuffle Reels">
+        <Shuffle size={20} />
+      </button>
 
       {/* Comments Modal */}
       {reels[activeIndex] && (

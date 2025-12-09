@@ -1,8 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/lib/store/auth-store";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = (() => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  // Ensure /api suffix is present
+  return baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+})();
 
 // Create axios instance
 const api = axios.create({

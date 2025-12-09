@@ -231,9 +231,9 @@ export default function CreatePage() {
       setUploadProgress(100);
       setUploadStage("Complete!");
 
-      // Small delay before redirect
+      // Small delay before redirect - go back to previous page
       setTimeout(() => {
-        router.push(mediaType === "video" ? "/reels" : "/");
+        router.back();
       }, 500);
     } catch (err) {
       setError(getErrorMessage(err));
