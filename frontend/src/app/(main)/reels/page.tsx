@@ -484,8 +484,7 @@ function CommentsModal({ reel, isOpen, onClose }: CommentsModalProps) {
 
     setIsSubmitting(true);
     try {
-      const response = await commentApi.createComment({
-        postId: reel.id,
+      const response = await commentApi.createComment(reel.id, {
         text: commentText.trim(),
       });
 
