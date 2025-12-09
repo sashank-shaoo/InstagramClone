@@ -22,6 +22,13 @@ function VerifyEmailContent() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
+    // If no email, redirect to login
+    if (!email) {
+      router.push("/login");
+    }
+  }, [email, router]);
+
+  useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(
         () => setResendCooldown(resendCooldown - 1),
